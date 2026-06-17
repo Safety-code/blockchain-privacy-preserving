@@ -1,0 +1,5 @@
+.ipfs/
+ipfs.exe
+__pycache__/
+*.mp4
+.env
