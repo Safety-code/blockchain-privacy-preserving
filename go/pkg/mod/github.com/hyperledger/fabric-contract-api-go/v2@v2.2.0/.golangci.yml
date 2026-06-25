@@ -1,0 +1,28 @@
+# See https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - gocyclo
+    - gofmt
+    - goheader
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - typecheck
+    - unused
+
+linters-settings:
+  gocyclo:
+    min-complexity: 18
+  goheader:
+    template: |-
+      Copyright the Hyperledger Fabric contributors. All rights reserved.
+      SPDX-License-Identifier: Apache-2.0

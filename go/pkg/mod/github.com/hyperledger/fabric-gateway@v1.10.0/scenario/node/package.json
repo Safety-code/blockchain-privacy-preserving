@@ -1,0 +1,39 @@
+{
+    "name": "@hyperledger/fabric-gateway-scenario",
+    "version": "0.0.1",
+    "description": "Scenario test for Fabric Gateway",
+    "engines": {
+        "node": ">=20.9.0"
+    },
+    "scripts": {
+        "build": "npm run clean && npm run compile && npm run lint && npm run format",
+        "clean": "rm -rf dist",
+        "cucumber": "NODE_OPTIONS='--enable-source-maps' cucumber-js --format cucumber-console-formatter --require 'dist/**/*.js' ../features",
+        "cucumber:no-hsm": "NODE_OPTIONS='--enable-source-maps' cucumber-js --tags 'not @hsm' --format cucumber-console-formatter --require 'dist/**/*.js' ../features",
+        "compile": "tsc",
+        "format": "prettier '**/*.{ts,js}' --check",
+        "format:fix": "prettier '**/*.{ts,js}' --write",
+        "lint": "eslint src",
+        "test": "npm run build && npm run cucumber",
+        "test:no-hsm": "npm run build && npm run cucumber:no-hsm"
+    },
+    "private": true,
+    "author": "",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@hyperledger/fabric-gateway": "file:../../node/fabric-gateway-dev.tgz",
+        "@hyperledger/fabric-protos": "^0.3.0"
+    },
+    "devDependencies": {
+        "@cucumber/cucumber": "^12.2.0",
+        "@tsconfig/node20": "^20.1.5",
+        "@types/node": "^20.19.1",
+        "cucumber-console-formatter": "^1.0.0",
+        "eslint": "^9.39.1",
+        "eslint-config-prettier": "^10.1.2",
+        "expect": "^30.2.0",
+        "prettier": "^3.6.2",
+        "typescript": "~5.8.3",
+        "typescript-eslint": "^8.46.0"
+    }
+}

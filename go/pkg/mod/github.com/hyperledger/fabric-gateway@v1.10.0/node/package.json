@@ -1,0 +1,62 @@
+{
+    "name": "@hyperledger/fabric-gateway",
+    "version": "1.10.0",
+    "description": "Hyperledger Fabric Gateway client API for Node",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "engines": {
+        "node": ">=20.9.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/hyperledger/fabric-gateway.git",
+        "directory": "node"
+    },
+    "bugs": "https://github.com/hyperledger/fabric-gateway/issues",
+    "homepage": "https://hyperledger.github.io/fabric-gateway/",
+    "author": {
+        "name": "hyperledger/fabric",
+        "email": "fabric@lists.lfdecentralizedtrust.org",
+        "url": "https://www.lfdecentralizedtrust.org/projects/fabric"
+    },
+    "scripts": {
+        "build": "npm run clean && npm run compile && npm run copy-non-ts-source",
+        "clean": "rm -rf apidocs dist",
+        "compile": "tsc --project tsconfig.build.json",
+        "copy-non-ts-source": "rsync -rv --prune-empty-dirs --include='*.d.ts' --exclude='*.ts' src/ dist",
+        "format": "prettier '**/*.{ts,js}' --check",
+        "format:fix": "prettier '**/*.{ts,js}' --write",
+        "generate-apidoc": "typedoc",
+        "lint": "eslint src",
+        "test": "npm run lint && npm run format && npm run unit-test",
+        "unit-test": "jest"
+    },
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@grpc/grpc-js": "^1.14.0",
+        "@hyperledger/fabric-protos": "^0.3.0",
+        "@noble/curves": "^1.9.4",
+        "google-protobuf": "^3.21.0"
+    },
+    "optionalDependencies": {
+        "pkcs11js": "^2.1.0"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3.3.1",
+        "@eslint/js": "^9.39.1",
+        "@tsconfig/node20": "^20.1.5",
+        "@types/google-protobuf": "^3.15.12",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^20.19.1",
+        "eslint": "^9.39.1",
+        "eslint-config-prettier": "^10.1.2",
+        "eslint-plugin-jest": "^29.0.1",
+        "eslint-plugin-tsdoc": "^0.4.0",
+        "jest": "^30.2.0",
+        "prettier": "^3.6.2",
+        "ts-jest": "^29.4.0",
+        "typedoc": "^0.28.3",
+        "typescript": "~5.8.3",
+        "typescript-eslint": "^8.46.0"
+    }
+}

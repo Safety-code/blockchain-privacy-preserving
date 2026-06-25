@@ -1,0 +1,273 @@
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+services:
+  ca0.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: ca0
+    container_name: ca0.example.com
+    environment:
+      - FABRIC_CA_SERVER_TLS_ENABLED=false
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org1.example.com-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/key.pem
+
+  ca1.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: ca1
+    container_name: ca1.example.com
+    environment:
+      - FABRIC_CA_SERVER_TLS_ENABLED=false
+      - FABRIC_CA_SERVER_TLS_CERTFILE=/etc/hyperledger/fabric-ca-server-config/ca.org2.example.com-cert.pem
+      - FABRIC_CA_SERVER_TLS_KEYFILE=/etc/hyperledger/fabric-ca-server-config/key.pem
+
+  orderer1.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: orderer
+    container_name: orderer1.example.com
+    environment:
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+    ports:
+      - 7050:7050
+      - 7053:7053
+    volumes:
+      - ../crypto-material/crypto-config/ordererOrganizations/example.com/orderers/orderer1.example.com/:/etc/hyperledger/orderer
+
+  orderer2.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: orderer
+    container_name: orderer2.example.com
+    environment:
+      - ORDERER_GENERAL_LISTENPORT=8050
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:8053
+    ports:
+      - 8050:8050
+      - 8053:8053
+    volumes:
+      - ../crypto-material/crypto-config/ordererOrganizations/example.com/orderers/orderer2.example.com/:/etc/hyperledger/orderer
+
+  orderer3.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: orderer
+    container_name: orderer3.example.com
+    environment:
+      - ORDERER_GENERAL_LISTENPORT=9050
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:9053
+    ports:
+      - 9050:9050
+      - 9053:9053
+    volumes:
+      - ../crypto-material/crypto-config/ordererOrganizations/example.com/orderers/orderer3.example.com/:/etc/hyperledger/orderer
+
+  peer0.org1.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer
+    container_name: peer0.org1.example.com
+    environment:
+      - CORE_PEER_ID=peer0.org1.example.com
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_LISTENADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_ENDPOINT=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.org1.example.com:7443
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp
+      ## Enable TLS
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      # GATEWAY SETTINGS
+      - CORE_PEER_GATEWAY_ENABLED=true
+    ports:
+      - 7051:7051
+      - 7443:7443
+    volumes:
+      - ../crypto-material/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/:/etc/hyperledger/peer
+    depends_on:
+      - orderer1.example.com
+
+  peer1.org1.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer
+    container_name: peer1.org1.example.com
+    environment:
+      - CORE_PEER_ID=peer1.org1.example.com
+      - CORE_PEER_ADDRESS=peer1.org1.example.com:9051
+      - CORE_PEER_LISTENADDRESS=peer1.org1.example.com:9051
+      - CORE_PEER_GOSSIP_ENDPOINT=peer1.org1.example.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org1.example.com:9051
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.org1.example.com:9443
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp
+      ## Enable TLS
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      # GATEWAY SETTINGS
+      - CORE_PEER_GATEWAY_ENABLED=true
+    ports:
+      - 9051:9051
+      - 9443:9443
+    volumes:
+      - ../crypto-material/crypto-config/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/:/etc/hyperledger/peer
+    depends_on:
+      - orderer1.example.com
+
+  peer0.org2.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer
+    container_name: peer0.org2.example.com
+
+    environment:
+      - CORE_PEER_ID=peer0.org2.example.com
+      - CORE_PEER_ADDRESS=peer0.org2.example.com:8051
+      - CORE_PEER_LISTENADDRESS=peer0.org2.example.com:8051
+      - CORE_PEER_GOSSIP_ENDPOINT=peer0.org2.example.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org2.example.com:8051
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.org2.example.com:8443
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp
+      # Enable TLS
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      # GATEWAY SETTINGS
+      - CORE_PEER_GATEWAY_ENABLED=true
+    ports:
+      - 8051:8051
+      - 8443:8443
+    volumes:
+      - ../crypto-material/crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/:/etc/hyperledger/peer
+    depends_on:
+      - orderer1.example.com
+
+  peer1.org2.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer
+    container_name: peer1.org2.example.com
+    environment:
+      - CORE_PEER_ID=peer1.org2.example.com
+      - CORE_PEER_ADDRESS=peer1.org2.example.com:10051
+      - CORE_PEER_LISTENADDRESS=peer1.org2.example.com:10051
+      - CORE_PEER_GOSSIP_ENDPOINT=peer1.org2.example.com:10051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.org2.example.com:10051
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.org2.example.com:10443
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp
+      # Enable TLS
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      # GATEWAY SETTINGS
+      - CORE_PEER_GATEWAY_ENABLED=true
+    ports:
+      - 10051:10051
+      - 10443:10443
+    volumes:
+      - ../crypto-material/crypto-config/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/:/etc/hyperledger/peer
+    depends_on:
+      - orderer1.example.com
+
+  org1_cli:
+    extends:
+      file: docker-compose-base.yaml
+      service: clibase
+    container_name: org1_cli
+    environment:
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/config/crypto-config/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    depends_on:
+      - peer0.org1.example.com
+
+  org2_cli:
+    extends:
+      file: docker-compose-base.yaml
+      service: clibase
+    container_name: org2_cli
+    environment:
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.org2.example.com:8051
+      - CORE_PEER_LOCALMSPID=Org2MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/config/crypto-config/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/config/crypto-configto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+    depends_on:
+      - peer0.org2.example.com
+
+  peer0.org3.example.com:
+    extends:
+      file: docker-compose-base.yaml
+      service: peer
+    container_name: peer0.org3.example.com
+    environment:
+      - CORE_PEER_ID=peer0.org3.example.com
+      - CORE_PEER_ADDRESS=peer0.org3.example.com:11051
+      - CORE_PEER_LISTENADDRESS=peer0.org3.example.com:11051
+      - CORE_PEER_GOSSIP_ENDPOINT=peer0.org3.example.com:11051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org3.example.com:11051
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.org3.example.com:11443
+      - CORE_PEER_LOCALMSPID=Org3MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/peer/msp
+      # Enable TLS
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/peer/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/peer/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/peer/tls/ca.crt
+      # GATEWAY SETTINGS
+      - CORE_PEER_GATEWAY_ENABLED=true
+    ports:
+      - 11051:11051
+      - 11443:11443
+    volumes:
+      - ../crypto-material/crypto-config/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/:/etc/hyperledger/peer
+    depends_on:
+      - orderer1.example.com
+
+  org3_cli:
+    extends:
+      file: docker-compose-base.yaml
+      service: clibase
+    container_name: org3_cli
+    environment:
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.org3.example.com:11051
+      - CORE_PEER_LOCALMSPID=Org3MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/config/crypto-config/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/server.key
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/config/crypto-configto/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/server.crt
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/config/crypto-config/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
+    depends_on:
+      - peer0.org3.example.com

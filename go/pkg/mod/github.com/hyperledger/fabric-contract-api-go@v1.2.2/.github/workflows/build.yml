@@ -1,0 +1,64 @@
+# Copyright the Hyperledger Fabric contributors. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name: fabric-contract-api-go
+
+on:
+  pull_request:
+    branches:
+    - main
+    - release-*
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '1.19'
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
+        registry-url: 'https://npm.pkg.github.com'
+    - uses: actions/checkout@v3
+    - name: install Tools
+      run: |
+
+        go install honnef.co/go/tools/cmd/staticcheck@latest
+        go install github.com/securego/gosec/v2/cmd/gosec@latest
+        go install github.com/cucumber/godog/cmd/godog@latest
+        go install golang.org/x/tools/cmd/goimports@latest
+        npm install -g license-check-and-add@4.0.5
+
+    - name: Vet and lint
+      run: ci/scripts/lint.sh
+
+    - name: Check Licenses
+      run: license-check-and-add check -f ci/license-config.json
+
+    - name: Run tests (excluding fv)
+      run: go test -race $(go list ./... | grep -v functionaltests)
+
+    - name: Run functional tests
+      working-directory: internal/functionaltests
+      run: godog run features/*
+
+    - name: Check tutorial contents
+      run: ci/scripts/tutorial-checks.sh
+
+    - name: Run the integration tests
+      env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        docker build . --file integrationtest/Dockerfile --tag hyperledger/fabric-contract-api-go-integrationtest
+
+        ci/scripts/setup-integration-chaincode.sh
+
+        curl -sSL https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh | bash -s -- samples binary docker
+        export TEST_NETWORK_DIR=$(pwd)/fabric-samples/test-network
+
+        cd ./integrationtest
+        npm ci
+
+        $(npm bin)/fabric-chaincode-integration run

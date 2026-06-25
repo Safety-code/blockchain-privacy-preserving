@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@hyperledger/fabric-chaincode-integration": "^0.8.0",
+    "@hyperledger/fabric-gateway": "^1.1.0"
+  },
+  "scripts": {
+    "test": "fabric-chaincode-integration"
+  }
+}

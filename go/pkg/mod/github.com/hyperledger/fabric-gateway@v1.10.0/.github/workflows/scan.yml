@@ -1,0 +1,93 @@
+name: "Security vulnerability scan"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to scan.
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Set up Go
+        id: setup-go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: stable
+          check-latest: true
+      - name: Create OSV-Scanner config
+        run: |
+          echo "GoVersionOverride = '${{ steps.setup-go.outputs.go-version }}'" > osv-scanner.toml
+      - name: Scan
+        id: scan-go
+        run: |
+          docker run --rm \
+            --volume './:/src' \
+            ghcr.io/google/osv-scanner:latest \
+            scan \
+            --config=/src/osv-scanner.toml \
+            --lockfile=/src/go.mod \
+            --format=markdown > osv-scanner.md
+      - name: Report failure
+        if: ${{ failure() && steps.scan-go.conclusion == 'failure' }}
+        run: |
+          cat osv-scanner.md >> ${GITHUB_STEP_SUMMARY}
+
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Set up Node
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: "lts/*"
+      - name: Create BOM
+        working-directory: node
+        run: |
+          npm sbom --omit=dev --package-lock-only --sbom-format cyclonedx > bom.cdx.json
+      - name: Scan
+        id: scan-node
+        run: |
+          docker run --rm \
+            --volume './:/src' \
+            ghcr.io/google/osv-scanner:latest \
+            scan \
+            --lockfile=/src/node/bom.cdx.json \
+            --format=markdown > osv-scanner.md
+      - name: Report failure
+        if: ${{ failure() && steps.scan-node.conclusion == 'failure' }}
+        run: |
+          cat osv-scanner.md >> ${GITHUB_STEP_SUMMARY}
+
+  java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ inputs.ref }}
+      - name: Scan
+        id: scan-java
+        run: |
+          docker run --rm \
+            --volume './:/src' \
+            ghcr.io/google/osv-scanner:latest \
+            scan \
+            --lockfile=/src/java/pom.xml \
+            --data-source=native \
+            --format=markdown > osv-scanner.md
+      - name: Report failure
+        if: ${{ failure() && steps.scan-java.conclusion == 'failure' }}
+        run: |
+          cat osv-scanner.md >> ${GITHUB_STEP_SUMMARY}

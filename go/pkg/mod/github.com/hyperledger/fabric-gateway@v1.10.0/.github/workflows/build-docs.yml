@@ -1,0 +1,57 @@
+name: Build documentation
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    runs-on: ubuntu-24.04
+    name: Node documentation
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: "lts/*"
+      - name: Generate documentation
+        run: make generate-docs-node
+      - name: Upload documentation
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: node-doc
+          path: node/apidocs/
+
+  java:
+    runs-on: ubuntu-24.04
+    name: Java documentation
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
+        with:
+          java-version: 25
+          distribution: temurin
+          cache: maven
+      - name: Generate JavaDoc
+        run: make generate-docs-java
+      - name: Upload JavaDoc
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: java-doc
+          path: java/target/reports/apidocs/
+
+  site:
+    runs-on: ubuntu-24.04
+    name: Documentation site
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: 3.x
+      - name: Generate documentation site
+        run: make generate-docs
+      - name: Upload documentation site
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: site-doc
+          path: site/

@@ -1,0 +1,11 @@
+.idea/
+.vscode/
+bin/
+cover.out
+fabric-protos/
+.DS_Store
+*.iml
+softhsm2.conf
+.python-version
+.venv/
+site/

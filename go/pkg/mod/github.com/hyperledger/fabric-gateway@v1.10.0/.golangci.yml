@@ -1,0 +1,59 @@
+version: "2"
+run:
+  build-tags:
+    - pkcs11
+linters:
+  default: none
+  enable:
+    - cyclop
+    - errcheck
+    - errname
+    - errorlint
+    - gocognit
+    - goheader
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nolintlint
+    - perfsprint
+    - protogetter
+    - staticcheck
+    - testifylint
+    - unused
+    - usetesting
+  settings:
+    cyclop:
+      max-complexity: 10
+    gocognit:
+      min-complexity: 15
+    goheader:
+      values:
+        const:
+          COMPANY: IBM Corp.
+      template: |-
+        Copyright {{ COMPANY }} All Rights Reserved.
+        SPDX-License-Identifier: Apache-2.0
+    staticcheck:
+      checks:
+        - all
+  exclusions:
+    generated: strict
+    warn-unused: true
+    presets:
+      - std-error-handling
+    rules:
+      - path: pkg/internal/test/
+        text: "^ST1000:"
+        linters:
+          - staticcheck
+      - path: pkg/hash/hash.go
+        text: "^ST1003:.* ALL_CAPS"
+        linters:
+          - staticcheck
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: strict
