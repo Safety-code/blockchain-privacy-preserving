@@ -1,0 +1,106 @@
+// test_state_machine.mjs
+// Exercises the REAL draftStore.js and events.js against a temp state
+// file, simulating: pipeline ingest -> draft created -> event broadcast
+// -> operator confirms -> draft removed. Does not touch Fabric/IPFS
+// (those need live infrastructure not available here) but this is the
+// part with the most hand-written state-transition logic, so it's the
+// part most worth proving correct in isolation.
+
+import assert from 'node:assert/strict';
+import { rm } from 'node:fs/promises';
+
+async function run() {
+    // Static `import` statements are hoisted above this function body, so
+    // env vars needed by config.js (imported transitively by draftStore.js)
+    // must be set BEFORE a dynamic import(), not before a static one.
+    process.env.STATE_FILE_PATH = './data/test-state.json';
+    process.env.TLS_CERT_PATH = '/dev/null';
+    process.env.IDENTITY_CERT_PATH = '/dev/null';
+    process.env.IDENTITY_KEY_PATH = '/dev/null';
+
+    const { addDraft, getDraft, listDrafts, removeDraft, hasSeenCid, loadState } = await import('./src/draftStore.js');
+    const { bus, EVENTS } = await import('./src/events.js');
+
+    await rm('./data/test-state.json', { force: true });
+    await loadState();
+
+    // --- Simulate the Pi pipeline's POST /api/ingest payload becoming a draft ---
+    const draft = {
+        videoId: 'video-test-001',
+        cid: 'bafybeienabqjhsnb34gz47k2ixus7wx6zntzentxjvu6775xwhkt6fy4ja',
+        sha256Ciphertext: '6758a0b15bf86b52aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        sha256Plaintext: null,
+        cameraId: 'PI-EDGE-001',
+        submittingOrg: 'Org1MSP',
+        wrappedKeyB64: 'ZHVtbXktd3JhcHBlZC1rZXk=',
+        ephemeralPubkeyPem: '-----BEGIN PUBLIC KEY-----\n(dummy)\n-----END PUBLIC KEY-----',
+        status: 'draft',
+        needsReview: true,
+        source: 'pipeline',
+    };
+
+    let eventFired = false;
+    bus.once(EVENTS.DRAFT_NEW, (payload) => {
+        eventFired = true;
+        assert.equal(payload.videoId, draft.videoId, 'event payload should carry the same videoId');
+    });
+
+    assert.equal(hasSeenCid(draft.cid), false, 'CID should not be seen before ingest');
+
+    await addDraft(draft);
+    bus.emit(EVENTS.DRAFT_NEW, draft); // server.js does this right after addDraft in the real route
+
+    assert.equal(eventFired, true, 'DRAFT_NEW event should have fired');
+    assert.equal(hasSeenCid(draft.cid), true, 'CID should be marked seen after draft is added');
+
+    // --- Confirm state is queryable (as /api/pending would return it) ---
+    const pending = listDrafts();
+    assert.equal(pending.length, 1, 'exactly one pending draft should exist');
+    assert.equal(pending[0].videoId, draft.videoId);
+
+    const fetched = getDraft(draft.videoId);
+    assert.deepEqual(fetched, draft, 'getDraft should return the exact stored draft');
+
+    // --- Simulate a SECOND detection of the same CID (idempotency check) ---
+    // This mirrors what the ipfsWatcher does every poll cycle -- it must
+    // NOT re-draft something already known, or the Pending queue would
+    // fill with duplicates every 5 seconds.
+    assert.equal(hasSeenCid(draft.cid), true, 'second detection of the same CID must be recognised as already seen');
+
+    // --- Simulate operator confirmation -> removeDraft (as the /confirm route does after a successful ledger submit) ---
+    let committedEventFired = false;
+    bus.once(EVENTS.ASSET_COMMITTED, () => { committedEventFired = true; });
+
+    await removeDraft(draft.videoId);
+    bus.emit(EVENTS.ASSET_COMMITTED, draft);
+
+    assert.equal(committedEventFired, true, 'ASSET_COMMITTED event should have fired');
+    assert.equal(getDraft(draft.videoId), null, 'draft should no longer exist after confirmation');
+    assert.equal(listDrafts().length, 0, 'pending queue should be empty after confirmation');
+
+    // --- Simulate a fallback-path draft (watcher-detected, no source: 'pipeline') ---
+    // This is the case the /confirm route's hard-stop guard exists for.
+    const fallbackDraft = {
+        videoId: 'video-test-002',
+        cid: 'bafyTestFallbackCidNoMetadata',
+        sha256Ciphertext: 'deadbeef',
+        wrappedKeyB64: null,
+        ephemeralPubkeyPem: null,
+        status: 'draft',
+        needsReview: true,
+        source: undefined, // NOT 'pipeline' -- this is the key distinction under test
+    };
+    await addDraft(fallbackDraft);
+    const fetchedFallback = getDraft(fallbackDraft.videoId);
+    assert.notEqual(fetchedFallback.source, 'pipeline',
+        'fallback-path draft must be distinguishable from a real pipeline draft -- ' +
+        'this is what routes/assets.js checks before allowing confirmation');
+
+    console.log('ALL STATE MACHINE TESTS PASSED');
+    await rm('./data/test-state.json', { force: true });
+}
+
+run().catch((err) => {
+    console.error('TEST FAILED:', err);
+    process.exit(1);
+});

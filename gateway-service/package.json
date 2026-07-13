@@ -1,0 +1,20 @@
+{
+  "name": "evidence-gateway-service",
+  "version": "1.0.0",
+  "description": "Bridges IPFS CID detection to Hyperledger Fabric chaincode transactions, and serves the evidence dashboard frontend via REST + WebSocket.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.10.9",
+    "@hyperledger/fabric-gateway": "^1.5.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "kubo-rpc-client": "^4.1.1",
+    "uuid": "^14.0.1",
+    "ws": "^8.21.0"
+  }
+}
