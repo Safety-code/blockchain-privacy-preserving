@@ -1,0 +1,19 @@
+[Unit]
+Description=Auto-upload encrypted camera footage to IPFS
+After=network.target ipfs.service
+Wants=ipfs.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ipfs-uploader
+Environment=ENCRYPTED_DIR=/home/pi/camera/encrypted
+Environment=IPFS_API_URL=http://127.0.0.1:5001/api/v0/add
+Environment=UPLOAD_LOG=/home/pi/camera/upload_log.jsonl
+Environment=DELETE_AFTER_UPLOAD=false
+ExecStart=/usr/bin/python3 /home/pi/ipfs-uploader/watch_and_upload.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
