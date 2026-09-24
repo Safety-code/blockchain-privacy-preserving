@@ -483,3 +483,97 @@ on shell environment variables (`PATH`, `FABRIC_CFG_PATH`,
 time a fresh error looks like "can't find X" immediately after opening a
 new terminal, re-check these first before assuming something is broken.
 
+
+# Pi camera: motion-triggered, encrypted, on-chain-anchored capture
+
+Runs on a Raspberry Pi (3 or later) with a PIR motion sensor and a Pi
+camera module. On motion, records a clip, encrypts it (ECIES: ephemeral
+ECDH -> HKDF-SHA256 -> AES-256-GCM), and submits the encrypted file to
+`api-server` in a single request. `api-server` adds it to Org3's IPFS node,
+recomputes its hash, and anchors the CID + hash + metadata on the ledger -
+this device never talks to IPFS directly.
+
+## Setup
+
+```
+pip install -r requirements.txt
+```
+
+Wire a PIR sensor to GPIO 17 (or change `PIR_GPIO_PIN` in
+`motion_recorder.py`) and attach a Pi camera module.
+
+## Configuration (environment variables)
+
+| var                       | default                        | notes |
+|---------------------------|---------------------------------|-------|
+| `CAMERA_ID`                | `CAM_001`                      | recorded on the ledger as `CameraID`, purely a label |
+| `FABRIC_API_URL`           | `http://localhost:3000/api`    | point this at the Docker host's LAN IP once the Pi is a separate device - see the main `ipfs-asset-transfer/README.md`'s "Device ingestion contract" |
+| `FABRIC_ORG`               | `org3`                         | only `org3` has an IPFS node today |
+| `API_KEY`                  | *(unset)*                      | required once `api-server`'s own `API_KEY` is set - sent as `X-Api-Key` |
+| `RETRY_INTERVAL_SECONDS`   | `60`                           | how often the background worker retries unfinished submissions |
+
+## Run
+
+```
+python motion_recorder.py
+```
+
+Keys are generated on first run under `keys/` (`ecc_private.pem` never
+leaves the device - keep it backed up somewhere safe, since it's the only
+way to decrypt any clip this device has ever recorded). Encrypted clips and
+their `.json` state sidecars live under `videos/`; a clip stays there,
+retried automatically in the background, until `api-server` confirms it's
+recorded - at which point both files are deleted (the ledger + pinned IPFS
+copy are the authoritative record) and a one-line breadcrumb
+(`timestamp`, `cameraId`, `id`, `cid`) is appended to `uploaded.log`. If
+you'd rather keep local copies as a backup, remove the two `os.remove()`
+calls in `process_pending()`.
+
+To decrypt a saved clip:
+
+```
+python motion_recorder.py --decrypt videos/motion_20250101_120000.mp4.enc
+```
+
+## Pairing with api-server (API key + reachability)
+
+1. **Generate one shared secret** and set it on both sides - there's only
+   one key for this pilot, not per-device keys:
+   ```
+   openssl rand -hex 32
+   ```
+   Set it as `API_KEY` in `api-server`'s own environment (e.g.
+   `API_KEY=<value> npm run dev`, or wherever you end up running it
+   persistently), and as `API_KEY` in this device's `motion-recorder.env`
+   (copy `motion-recorder.env.example` first).
+
+2. **Point `FABRIC_API_URL` at the Docker host's LAN IP**, not `localhost` -
+   this device isn't on the same machine. Find the host's LAN address
+   (`ip addr` on the host) and set e.g.
+   `FABRIC_API_URL=http://192.168.1.50:3000/api`.
+
+3. **Confirm reachability before trusting the recorder with it** - from the
+   Pi:
+   ```
+   curl http://192.168.1.50:3000/api/orgs
+   ```
+   If this hangs or refuses, it's a network/firewall problem on the Docker
+   host (allow inbound TCP/3000 from the Pi's subnet), not this script.
+   Kubo's own port (5001) should stay loopback-only on the host regardless -
+   this device never needs to reach it directly.
+
+## Running on boot (systemd)
+
+```
+sudo cp motion-recorder.service /etc/systemd/system/
+sudo cp motion-recorder.env.example /home/pi/motion-recorder/motion-recorder.env
+# edit motion-recorder.env with real values, then:
+sudo systemctl daemon-reload
+sudo systemctl enable --now motion-recorder.service
+journalctl -u motion-recorder -f   # watch it run
+```
+
+`Restart=on-failure` in the unit is what actually makes the retry/sidecar
+design meaningful across a crash or power loss - the process has to come
+back up on its own for "resume unfinished uploads on restart" to happen
+without someone physically intervening.
