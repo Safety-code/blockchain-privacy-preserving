@@ -456,7 +456,7 @@ curl http://localhost:4000/health
 
 ---
 
-## 10. Edge device (Pi)
+## 10. Edge device (Raspberry Pi 3B+ )
 
 Deploy `edge-device/evidence_capture_pipeline.py` to the Pi per
 `edge-device/README.md`'s provisioning steps, pointed at the gateway's
